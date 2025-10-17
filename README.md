@@ -15,7 +15,7 @@ A lightweight command runner with env file support and command shortcuts, writte
 Clone the repository:
 
 ```bash
-git clone https://github.com/saracalihan/ortrun.git
+git clone git@github.com:saracalihan/ortrun.git
 cd ortrun
 ```
 

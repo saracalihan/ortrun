@@ -11,7 +11,7 @@
 #define CMD_NAME_MAX 128
 #define ENV_MAX_CHAR (1024*1024)
 #define CMD_MAX_CHAR (1024*1024)
-#define COMMANDS_FILE "cache-ortrun"
+char COMMANDS_FILE[ENV_PATH_SIZE];
 
 
 typedef struct Command{
@@ -159,8 +159,9 @@ void load_commands(){
 }
 
 void save_commands(){
-    FILE* f = fopen(COMMANDS_FILE, "w+b");
+    FILE* f = fopen(COMMANDS_FILE, "wb+");
     if(!f){
+        fprintf(stderr, "SAVE COMMANDS: '%s' dosyası açılamadı veya oluşturulamadı\n", COMMANDS_FILE);
         perror("SAVE COMMANDS");
         exit(EXIT_FAILURE);
     }
@@ -192,8 +193,25 @@ void run(char* env_path, int argc, char** argv, bool verbose){
     system(command);
 }
 
+void set_commands_file_path() {
+    const char* home = getenv("HOME");
+    if (!home) {
+        fprintf(stderr, "HOME environment variable not set\n");
+        exit(EXIT_FAILURE);
+    }
+    snprintf(COMMANDS_FILE, ENV_PATH_SIZE, "%s/.cache/ortrun-commands", home);
+    // Klasör yoksa oluştur
+    char cache_dir[ENV_PATH_SIZE];
+    snprintf(cache_dir, ENV_PATH_SIZE, "%s/.cache", home);
+    struct stat st = {0};
+    if (stat(cache_dir, &st) == -1) {
+        mkdir(cache_dir, 0700);
+    }
+}
+
 int main(int argc, char** argv){
-    if(argc<=1){
+    set_commands_file_path();
+    if(argc<1){
         print_usage();
         exit(EXIT_FAILURE);
     }
@@ -203,7 +221,7 @@ int main(int argc, char** argv){
     char env_path[ENV_PATH_SIZE] = ".env";
     char cmd_name[CMD_NAME_MAX] = {0};
     int opt;
-    while ((opt = getopt(argc, argv, ":f:hva:l")) != -1) {
+    while ((opt = getopt(argc, argv, ":f:hva:lr:")) != -1) {
         switch (opt) {
             case 'f':
             snprintf(env_path, ENV_PATH_SIZE, "%s", optarg);
@@ -228,7 +246,6 @@ int main(int argc, char** argv){
             return 0;
         }
     }
-
     if(list_commands){
         load_commands();
         printf("[ORTRUN] Saved commands (%d):\n", commands.count);
@@ -273,6 +290,7 @@ int main(int argc, char** argv){
             failure(msg);
         }
         run(c->path, -1, c->cmd, verbose);
+        return;
     }
 
     run(env_path, argc, argv, verbose);
